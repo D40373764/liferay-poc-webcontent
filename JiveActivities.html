@@ -1,0 +1,172 @@
+<style type="text/css">#JiveActivities .well {
+  margin-bottom: 0;
+}
+</style>
+<div id="JiveActivities">&nbsp;</div>
+<script src="/documents/11374/22203/jquery.timeago.js" type="text/javascript"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/3.0.3/handlebars.min.js"></script><script id="activity-template" type="text/x-handlebars-template">
+  <section class="activity">
+    <ul class="media-list">
+      {{#each list}}
+      <li class="">
+        <div class="well well-small">
+          <div class="pull-left">
+            <a href="#">
+              <img class="img-circle" src='{{{actor.image.url}}}' height='30' width='30'/>
+            </a>
+            &nbsp;&nbsp;
+          </div>
+          <div>
+            {{{content}}} <br>
+            <a class="" href="{{{object.url}}}">
+              <i class="icon-thumbs-up"></i> {{likeCount jive}}&nbsp;&nbsp;
+              <i class="icon-comment"></i> {{commentCount jive}}
+            </a>
+            &nbsp;&nbsp;
+            <i class="icon-time"></i>&nbsp;<span class="timeago" title="{{toISO8601 jive.collectionUpdated}}">{{toISO8601 jive.collectionUpdated}}</span>
+          </div>
+        </div>
+      </li>
+      {{/each}}
+    </ul>
+  </section>
+</script><script>
+
+  Handlebars.registerHelper('showGroup', function(target) {
+    if (target && target.objectType == 'jive:group') {
+      return ' in ' + target.displayName;
+    }
+    else {
+      return '';
+    }
+  });
+
+  Handlebars.registerHelper('likeCount', function(jive) {
+    if (jive.parentLikeCount) {
+      return jive.parentLikeCount;
+    }
+    else if (jive.likeCount) {
+      return jive.likeCount;
+    } else {
+      return 0;
+    }
+  });
+
+  Handlebars.registerHelper('commentCount', function(jive) {
+    if (jive.parentReplyCount) {
+      return jive.parentReplyCount;
+    } else if (jive.replyCount) {
+      return jive.replyCount;
+    } else {
+      return 0;
+    }
+  });
+
+  Handlebars.registerHelper('toISO8601', function(date) {
+    return date.replace(/\.\d\d\d\+0000/,'Z');
+  });
+
+  function getActivities() {
+
+    AUI().use('event', 'node', function(A) {
+
+      var source   = A.one("#activity-template").html();
+      var template = Handlebars.compile(source);
+
+      Liferay.Service(
+        '/jive-hook.rest/get',
+        {
+          path: 'activities?count=10'
+        },
+        function(json) {
+          console.log(json.list);
+
+          var html = template(json);
+
+          var JiveActivities = A.one('#JiveActivities');
+          JiveActivities.html(html);
+
+          $("span.timeago").timeago();
+
+        }
+      );
+    });
+
+  }
+
+  Liferay.on('poc_refresh', function() {
+    getActivities();
+  });
+
+  AUI().ready(function(A) {
+    getActivities();
+  });
+
+</script>
+
+<ul>
+  <li class="dropdown user-inbox-link">
+  <ul class="dropdown-menu" style="left:-400px;">
+  </ul>
+  </li>
+</ul>
+<script id="jive-inbox-template" type="text/x-handlebars-template">
+  {{#each list}}
+  <li style="width:500px">
+    <div class="well well-small" style="margin-bottom:0">
+      <a class="pull-left" href="#">
+        <img class="img-circle" src='{{{actor.image.url}}}' height='30' width='30'/>
+      </a>
+      {{{content}}}
+    </div>
+  </li>
+  {{/each}}
+</script><script>
+
+  $('.user-inbox-link > a').on('click', function() {
+
+    var target = $('.user-inbox-link .dropdown-menu');
+    if (target.hasClass('media-object')) {
+      target.removeClass('media-object');
+    }
+    else {
+      target.addClass('media-object');
+    }
+
+    return false;
+  });
+
+  function getInbox(A) {
+
+    var source   = A.one("#jive-inbox-template").html();
+    var template = Handlebars.compile(source);
+
+    Liferay.Service(
+      '/jive-hook.rest/get',
+      {
+        path: 'inbox?filter=unread&directive=collapse'
+      },
+      function(json) {
+        console.log(json);
+        console.log(json.unread);
+
+        var html = template(json);
+
+        $('.user-inbox-link > a').html('Inbox (' + json.unread + ')');
+        if (json.unread > 0) {
+          $('.user-inbox-link .dropdown-menu').append(html);
+        }
+        else {
+          $('.user-inbox-link .dropdown-menu').remove();
+        }
+        $('.user-inbox-link').insertAfter('.dockbar-user-notifications');
+      }
+    );
+  };
+
+
+  AUI().ready(function(A) {
+    getInbox(A);
+  });
+
+
+</script>

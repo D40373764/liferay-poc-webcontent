@@ -1,0 +1,63 @@
+<style type="text/css">
+
+body {
+    overflow-x: hidden;
+}
+
+label[for="slide-nav-trigger"] {
+    position: fixed;
+    top: 210px;
+    right: 0px;
+    color: white;
+    background: #666;
+    z-index: 999;
+    width: 20px;
+    height: 160px;
+    cursor: pointer;
+    box-shadow: 0 5px 10px rgba(0,0,0,0.2);
+    text-align: center;
+    padding: 5px;
+    box-sizing: border-box;
+ }
+
+.slide-menu .dropdown-menu {
+    top: 200px;
+    left: inherit;
+    right: -200px;
+    display: block!important;
+    width: 200px;
+    height: 160px;
+}
+
+.slide-nav-trigger {
+    position: absolute;
+    clip: rect(0, 0, 0, 0);
+}
+
+.slide-nav-trigger:checked + label {
+    right: 200px;
+}
+
+.slide-nav-trigger:checked ~ .dropdown-menu {
+    right: 0px;
+}
+
+.slide-nav-trigger + label, .slide-menu .dropdown-menu {
+    transition: right 0.5s;
+    -webkit-transition: right 0.5s;
+}
+</style>
+
+<div class="slide-menu">
+    <input class="slide-nav-trigger" id="slide-nav-trigger" type="checkbox" /> 
+    <label for="slide-nav-trigger"> STATUS </label>
+    <ul class="dropdown-menu">
+      <li class="nav-item"><a href="#">Home</a></li>
+      <li class="nav-item"><a href="#">Portfolio</a></li>
+      <li class="nav-item"><a href="#">About</a></li>
+      <li class="nav-item"><a href="#">Blog</a></li>
+      <li class="nav-item"><a href="#">Contact</a></li>
+    </ul>
+</div>
+
+<div class="site-wrap"><!-- insert the rest of your page markup here --></div>

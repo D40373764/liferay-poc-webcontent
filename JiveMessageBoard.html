@@ -1,0 +1,191 @@
+<style type="text/css">.pocApp .table {
+    font-family: 'Helvetica Neue', Helvetica, Arial, 'Lucida Grande', sans-serif;
+    font-size: 13px;
+  }
+
+  .pocApp .table th:first-child {
+    width: 60%;
+  }
+
+  .pocApp .navbar {
+    margin-bottom: 8px;
+  }
+
+  .aui .table th.center, .aui .table td.center {
+    text-align: center;
+  }
+</style>
+<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.3.15/angular.min.js"></script>
+<div class="pocApp" ng-app="pocApp">
+<div ng-controller="PocController">
+<div class="navbar">
+<div class="navbar-inner">
+<ul class="nav">
+  <li><a href="" ng-click="getContentsByType('content')">All Content</a></li>
+  <li><a href="" ng-click="getContentsByType('post')">Blog Posts</a></li>
+  <li><a href="" ng-click="getContentsByType('document')">Documents</a></li>
+  <li><a href="" ng-click="getContentsByType('discussion')">Discussions</a></li>
+  <li><a href="" ng-click="getContentsByType('poll')">Polls</a></li>
+  <li><a href="" ng-click="getContentsByType('video')">Videos</a></li>
+  <li><a href="" ng-click="getContentsByType('event')">Events</a></li>
+  <li><a href="" ng-click="getContentsByType('update')">Status</a></li>
+</ul>
+</div>
+</div>
+
+<form class="form-search form-inline">
+<div class="pull-left">Filter: <input class="input-medium search-query" ng-model="query" type="text" /></div>
+
+<div class="pull-right"><button class="btn btn-primary" ng-click="getPrevContents()" ng-disabled="disablePrev">Prev</button><button class="btn btn-primary" ng-click="getNextContents()" ng-disabled="disableNext">Next</button></div>
+</form>
+
+<table class="table table-bordered table-hover table-condensed" ng-cloak="">
+  <thead>
+    <tr>
+      <th>Title</th>
+      <th>Author</th>
+      <th class="center">&nbsp;</th>
+      <th class="center">&nbsp;</th>
+      <th class="center">&nbsp;</th>
+      <th class="center">Views</th>
+      <th>Latest Activities</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr ng-repeat="content in contents | filter:query">
+      <td><i class="{{content.type | typeicon}}"></i>&nbsp;&nbsp;<a href="{{content.resources.html.ref}}">{{content.subject}}</a></td>
+      <td>{{content.author.displayName}}</td>
+      <td class="center">{{content.likeCount}}</td>
+      <td class="center">{{content.likeCount}}</td>
+      <td class="center">{{content.replyCount}}</td>
+      <td class="center">{{content.viewCount}}</td>
+      <td>{{content.lastActivity | date:'MMM d, y hh:mm:ss a'}}</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+<script>
+
+
+angular.module('pocApp', ['pocFilters'])
+.controller('PocController', ['$scope', '$rootScope', function($scope, $rootScope) {
+  $scope.name = 'POC';
+  $scope.type = {};
+  $scope.currentType = 'content';
+  $scope.showPrev = false;
+  $scope.showNext = false;
+
+  $scope.getContentsByType = function(type) {
+    $scope.currentType = type;
+
+    if ($scope.type[type] == undefined) {
+      $scope.type[type] = {};
+      $scope.type[type].startIndex = 0;
+    }
+
+    $scope.getContents(type, 0);
+  };
+
+
+  $scope.getNextContents = function() {
+    var type = $scope.currentType;
+    var path = '';
+
+    if ($scope.type[type] == undefined) {
+      $scope.type[type] = {};
+      $scope.type[type].startIndex = 0;
+    }
+
+    $scope.type[type].startIndex += 20;
+    $scope.getContents(type, $scope.type[type].startIndex);
+  }
+
+  $scope.getPrevContents = function() {
+    var type = $scope.currentType;
+
+    $scope.type[type].startIndex -= 20;
+    $scope.getContents(type, $scope.type[type].startIndex);
+
+  };
+
+
+  $scope.getContents = function(type, startIndex) {
+
+    $scope.type[type].startIndex = startIndex;
+
+    if (type === 'content') {
+      path = 'contents?count=20&startIndex=' + $scope.type[type].startIndex;
+    }
+    else {
+      path = 'contents?count=20&filter=type(' + type + ')&startIndex=' + $scope.type[type].startIndex;
+    }
+
+    AUI().use('event', function(A) {
+
+      toggleMask();
+
+      Liferay.Service(
+        '/jive-hook.rest/get',
+        {
+          path: path
+        },
+        function(json) {
+          console.log("Content Type: " + type);
+          console.log(json);
+
+          $scope.$apply(function () {
+            $scope.contents = json.list;
+            if (json.links === undefined) {
+              $scope.disablePrev = true;
+              $scope.disableNext = true;
+            }
+            else {
+              $scope.disablePrev = json.links.previous ? false : true;
+              $scope.disableNext = json.links.next ? false : true;
+            }
+
+            toggleMask();
+          });
+        }
+      );
+
+    });
+
+  };
+
+  $scope.getContentsByType('content');
+
+
+}]);
+
+angular.module('pocFilters', []).filter('typeicon', function() {
+  return function(input) {
+    switch (input) {
+      case 'post':
+        return 'icon-pencil';
+      case 'document':
+        return 'icon-list-alt';
+      case 'discussion':
+        return 'icon-comment';
+      case 'poll':
+        return 'icon-bullhorn';
+      case 'video':
+        return 'icon-film';
+      case 'event':
+        return 'icon-calendar';
+      case 'dm':
+        return 'icon-envelope';
+      case 'update':
+        return 'icon-random';
+    }
+  };
+});
+
+function toggleMask() {
+  var node = AUI().one('.pocApp').ancestor('.portlet-content');
+  if (node.loadingmask == null)
+    node.plug(AUI().LoadingMask);
+  node.loadingmask.toggle();
+}
+
+</script></div>

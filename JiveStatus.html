@@ -1,141 +1,181 @@
-<style type="text/css">.activity .well {
-  margin-bottom: 0;
-}
+<style type="text/css">
+  .activity .well {
+    margin-bottom: 0;
+  }
 
-.activity a {
-  text-decoration: none;
-}
+  .activity a {
+    text-decoration: none;
+  }
 </style>
-<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.3.15/angular.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.4.1/angular-sanitize.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.3.15/angular.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/angular.js/1.4.1/angular-sanitize.min.js"></script>
 <div class="jiveStatusApp" ng-app="jiveStatusApp">
-<div ng-controller="JiveStatusController">
-<section class="activity">
-<ul class="media-list">
-	<li ng-repeat="status in activities | orderBy: '-jive.collectionUpdated'">
-	<div class="well well-small">
-	<div class="span1"><a href="#"><img class="img-circle" height="30" src="{{status.actor.image.url}}" width="30" /> </a> &nbsp;&nbsp;</div>
+  <div id="JiveStatusController" ng-controller="JiveStatusController">
+    <section class="activity">
+      <ul class="media-list">
+        <li ng-repeat="status in activities | orderBy: '-jive.collectionUpdated'">
+          <div class="well well-small">
+            <div class="span1">
+              <a href="#"><img class="img-circle" height="30" src="{{status.actor.image.url}}" width="30" /> </a>&nbsp;&nbsp;</div>
+            <div>
+              <div ng-bind-html="status.content">&nbsp;</div>&nbsp;
+              <span class="icon-time"></span>
+              <span>{{status.jive.collectionUpdated | timeagoFilter}}</span>&nbsp;&nbsp;
+              <a href="{{status.object.url}}" ng-show="canComment(status.jive)"><span class="icon-comment"></span> &nbsp;{{ status.jive | commentFilter }} </a>
+              <a href="#" ng-click="updateLike($index, status)" ng-show="canLike(status.jive)"><span class="icon-thumbs-up"></span> &nbsp;{{ status.jive | likeFilter }} </a>
+            </div>
+          </div>
+        </li>
+      </ul>
+    </section>
+  </div>
+  <script>
+    var statusApp = angular.module('jiveStatusApp', ['ngSanitize']);
 
-	<div>
-	<div ng-bind-html="status.content">&nbsp;</div>
-	&nbsp;<span>{{status.jive.collectionUpdated | date:'MMM d, y hh:mm:ss a'}}</span> &nbsp;&nbsp; <a href="{{status.object.url}}" ng-show="canComment(status.jive)"> &nbsp;{{ status.jive | commentFilter }} </a> <a href="#" ng-click="updateLike($index, status)" ng-show="canLike(status.jive)"> &nbsp;{{ status.jive | likeFilter }} </a></div>
-	</div>
-	</li>
-</ul>
-</section>
-</div>
-<script>
-var myStatusApp = angular.module('jiveStatusApp', ['ngSanitize']);
-myStatusApp.controller('JiveStatusController', ['$scope', '$rootScope', function($scope, $rootScope) {
-  $scope.name = 'JiveStatusController';
-  $scope.activities = {};
+    statusApp.constant("CONST", {
+      "units": [
+        { name: "second", limit: 60, in_seconds: 1 },
+        { name: "minute", limit: 3600, in_seconds: 60 },
+        { name: "hour", limit: 86400, in_seconds: 3600  },
+        { name: "day", limit: 604800, in_seconds: 86400 },
+        { name: "week", limit: 2629743, in_seconds: 604800  },
+        { name: "month", limit: 31556926, in_seconds: 2629743 },
+        { name: "year", limit: null, in_seconds: 31556926 }
+      ]
+    });
 
-  $scope.getStatus = function(startIndex) {
+    statusApp.controller('JiveStatusController', ['$scope', '$rootScope', function($scope, $rootScope) {
+      $scope.name = 'JiveStatusController';
+      $scope.activities = {};
 
-    AUI().use('event', function(A) {
+      $scope.getStatus = function(startIndex) {
 
-      toggleMask();
+        AUI().use('event', function(A) {
+          var node = AUI().one('.jiveStatusApp').ancestor('.portlet-content');
 
-      Liferay.Service(
-        '/jive-hook.rest/get',
-        {
-          path: 'activities?count=10'
-        },
-        function(json) {
-          console.log(json.list);
+          toggleMask(node);
 
-          $scope.$apply(function () {
-            $scope.activities = json.list;
-            toggleMask();
-          });
+          Liferay.Service(
+            '/jive-hook.rest/get',
+            {
+              path: 'activities?count=10'
+            },
+            function(json) {
+              console.log(json.list);
 
+              $scope.$apply(function () {
+                $scope.activities = json.list;
+                toggleMask(node);
+              });
+            }
+          );
+
+        });
+
+      };
+
+      $scope.canLike = function(jive) {
+        if (undefined != jive.parentLikeCount || undefined != jive.likeCount) {
+          return true;
+        } else {
+          return false;
         }
-      );
+      };
 
+      $scope.canComment = function(jive) {
+        if (undefined != jive.parentReplyCount || undefined != jive.replyCount) {
+          return true;
+        } else {
+          return false;
+        }
+      };
+
+      $scope.updateLike = function(index, status) {
+        console.log(status);
+        AUI().use('event', function(A) {
+
+          if (status.jive.canLike) {
+            Liferay.Service(
+              '/jive-hook.rest/post',
+              {
+                path: status.object.id.substring(42) + '/likes',
+                post: '{}'
+              },
+              function(obj) {
+                $scope.getStatus(0);
+              }
+            );
+          }
+          else {
+            Liferay.Service(
+              '/jive-hook.rest/delete',
+              {
+                path: status.object.id.substring(42) + '/likes',
+              },
+              function(obj) {
+                $scope.getStatus(0);
+              }
+            );
+          }
+
+        });
+      };
+
+      $scope.getStatus(0);
+
+    }]);
+
+    statusApp.filter('likeFilter', function() {
+      return function(jive) {
+        if (undefined != jive.parentLikeCount) {
+          return jive.parentLikeCount;
+        }
+        else if (undefined != jive.likeCount) {
+          return jive.likeCount;
+        } else {
+          return "";
+        }
+      }
     });
 
-  };
-
-  $scope.canLike = function(jive) {
-    if (undefined != jive.parentLikeCount || undefined != jive.likeCount) {
-      return true;
-    } else {
-      return false;
-    }
-  };
-
-  $scope.canComment = function(jive) {
-    if (undefined != jive.parentReplyCount || undefined != jive.replyCount) {
-      return true;
-    } else {
-      return false;
-    }
-  };
-
-  $scope.updateLike = function(index, status) {
-    console.log(status);
-    AUI().use('event', function(A) {
-
-      if (status.jive.canLike) {
-        Liferay.Service(
-          '/jive-hook.rest/post',
-          {
-            path: status.object.id.substring(42) + '/likes',
-            post: '{}'
-          },
-          function(obj) {
-            $scope.getStatus(0);
-          }
-        );
+    statusApp.filter('commentFilter', function() {
+      return function(jive) {
+        if (undefined != jive.parentReplyCount) {
+          return jive.parentReplyCount;
+        } else if (undefined != jive.replyCount) {
+          return jive.replyCount;
+        } else {
+          return "";
+        }
       }
-      else {
-        Liferay.Service(
-          '/jive-hook.rest/delete',
-          {
-            path: status.object.id.substring(42) + '/likes',
-          },
-          function(obj) {
-            $scope.getStatus(0);
-          }
-        );
-      }
-
     });
-  };
 
-  $scope.getStatus(0);
+    statusApp.filter('timeagoFilter', ['CONST', function(CONST) {
+      return function(time) {
+        var diff = (new Date() - new Date(time)) / 1000;
+        if (diff < 5) return "now";
 
-}]);
+        var i = 0, unit;
+        while (unit = CONST.units[i++]) {
+          if (diff < unit.limit || !unit.limit){
+            var diff =  Math.floor(diff / unit.in_seconds);
+            return diff + " " + unit.name + (diff>1 ? "s" : "") + " ago";
+          }
+        };
+      }
+    }]);
 
-myStatusApp.filter('likeFilter', function() {
-  return function(jive) {
-    if (undefined != jive.parentLikeCount) {
-      return jive.parentLikeCount;
-    }
-    else if (undefined != jive.likeCount) {
-      return jive.likeCount;
-    } else {
-      return "";
-    }
-  }
-});
+    function toggleMask(node) {
+      //var node = AUI().one('.jiveStatusApp').ancestor('.portlet-content');
+      if (node.loadingmask == null)
+        node.plug(AUI().LoadingMask);
+      node.loadingmask.toggle();
+    };
 
-myStatusApp.filter('commentFilter', function() {
-  return function(jive) {
-    if (undefined != jive.parentReplyCount) {
-      return jive.parentReplyCount;
-    } else if (undefined != jive.replyCount) {
-      return jive.replyCount;
-    } else {
-      return "";
-    }
-  }
-});
-
-function toggleMask() {
-  var node = AUI().one('.jiveStatusApp').ancestor('.portlet-content');
-  if (node.loadingmask == null)
-    node.plug(AUI().LoadingMask);
-  node.loadingmask.toggle();
-}
-
-</script></div>
+    Liferay.on('poc_refresh', function() {
+      setTimeout(function(){
+        angular.element('#JiveStatusController').scope().getStatus(0);
+       }, 3000);
+    });
+  </script>
+</div>

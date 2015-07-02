@@ -9,43 +9,16 @@
 <div class="input-prepend input-append input-block-level"><img class="img-circle" height="50" src="https://devrygroup.jiveon.com/api/core/v3/people/@me/avatar" width="50" /> <input class="status-text span10" placeholder="What's going on?" style="height:50px" type="text" />
 <div class="btn-group"><button class="btn post-button" style="height:50px">Post</button></div>
 
-<div class="alert alert-success" style="display:none">Your post is created successfully.</div>
 <script>
 
 $(function() {
-  $('.JiveStatusInput .dropdown-button').on('click', function() {
-
-    var target = $('.JiveStatusInput .dropdown-menu');
-    if (target.hasClass('media-object')) {
-      target.removeClass('media-object');
-    }
-    else {
-      target.addClass('media-object');
-    }
-
-    return false;
-  });
-
-  $('.JiveStatusInput .dropdown-menu > li').on('mouseup', function() {
-    $('.posttype').text($(this).find('a').text());
-    $('.JiveStatusInput .dropdown-menu').removeClass('media-object');
-
-    return false;
-  });
 
   $('.JiveStatusInput .post-button').on('click', function() {
-    var thisButton = $(this);
-    thisButton.hide();
+    var that = $(this);
 
-    var type = $('.posttype').text();
-    var text;
-
-    if (type.endsWith('Status')) {
-      text = '{"type": "update", "content": {"type": "text/html", "text": "<body><p>' + $('.status-text').val() + '</p></body>"} }';
-    }
-    else {
-      text = '{"content": {"type": "text/html", "text": ' + $('.status-text').val() + '}, "subject": "Quick post", "type": "post"}';
-    }
+    that.prop('disabled', true);
+    
+    var text = '{"type": "update", "content": {"type": "text/html", "text": "<body><p>' + $('.status-text').val() + '</p></body>"} }';
 
     console.log("text=" + text);
 
@@ -58,11 +31,10 @@ $(function() {
       function(obj) {
         console.log(obj);
         if (obj.status == '201') {
-          $('.JiveStatusInput .alert').show('slow').delay(1000).hide(function() {
-            thisButton.show();
-            Liferay.fire('poc_refresh', {});
-          })
+          Liferay.fire('poc_refresh', {});
         }
+        
+        that.prop('disabled', false);
       }
     );
     return false;

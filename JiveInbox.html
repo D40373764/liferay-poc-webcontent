@@ -1,0 +1,64 @@
+<ul>
+  <li class="dropdown user-inbox-link">
+    <ul class="dropdown-menu" style="left:-400px;"></ul>
+  </li>
+</ul>
+<script id="jive-inbox-template" type="text/x-handlebars-template">
+  {{#each list}}
+  <li style="width:500px">
+    <div class="well well-small" style="margin-bottom:0">
+      <a class="pull-left" href="#">
+        <img class="img-circle" src='{{{actor.image.url}}}' height='30' width='30'/>
+      </a>
+      {{{content}}}
+    </div>
+  </li>
+  {{/each}}
+</script>
+<script>
+  $('.user-inbox-link > a').on('click', function() {
+
+    var target = $('.user-inbox-link .dropdown-menu');
+    if (target.hasClass('media-object')) {
+      target.removeClass('media-object');
+    }
+    else {
+      target.addClass('media-object');
+    }
+
+    return false;
+  });
+
+  function getInbox(A) {
+
+    var source   = A.one("#jive-inbox-template").html();
+    var template = Handlebars.compile(source);
+
+    Liferay.Service(
+      '/jive-hook.rest/get',
+      {
+        path: 'inbox?filter=unread&directive=collapse'
+      },
+      function(json) {
+        console.log(json);
+        console.log(json.unread);
+
+        var html = template(json);
+
+        $('.user-inbox-link > a').html('Inbox (' + json.unread + ')');
+        if (json.unread > 0) {
+          $('.user-inbox-link .dropdown-menu').append(html);
+        }
+        else {
+          $('.user-inbox-link .dropdown-menu').remove();
+        }
+        $('.user-inbox-link').insertAfter('.dockbar-user-notifications');
+      }
+    );
+  };
+
+
+  AUI().ready(function(A) {
+    getInbox(A);
+  });
+</script>
